@@ -1,0 +1,28 @@
+{
+    "name": "fratily/event-dispatcher",
+    "type": "library",
+    "keywords": [
+        "fratily",
+        "psr-14",
+        "event-dispatcher"
+    ],
+    "authors": [
+        {
+            "name": "Kento Oka",
+            "email": "kento-oka@kentoka.com"
+        }
+    ],
+    "license": "MIT",
+    "require": {
+        "php": "^7.1",
+        "psr/event-dispatcher": "^0.6.0",
+        "psr/event-dispatcher-message": "^0.6.0",
+        "psr/event-dispatcher-task": "^0.6.0",
+        "fratily/reflection": "^0.4.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fratily\\EventDispatcher\\": "src/"
+        }
+    }
+}
