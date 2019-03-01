@@ -13,7 +13,6 @@
  */
 namespace Fratily\EventDispatcher;
 
-use Psr\EventDispatcher\EventInterface;
 use Psr\EventDispatcher\ListenerProviderInterface;
 
 /**
@@ -22,77 +21,72 @@ use Psr\EventDispatcher\ListenerProviderInterface;
 class ListenerProvider implements ListenerProviderInterface{
 
     /**
-     * @var callable[]
+     * @var ListenerIdGeneratorInterface
+     */
+    private $idGenerator;
+
+    /**
+     * @var Listener[]
      */
     private $listeners  = [];
 
     /**
-     * @var string[][]
+     * Constructor.
+     *
+     * @param   ListenerIdGeneratorInterface    $idGenerator
      */
-    private $relations  = [];
-
-    protected static function getSuperClasses(string $class){
-        if(!class_exists($class)){
-            throw new \InvalidArgumentException;
-        }
-
-        $result = [$class];
-        $parent = $class;
-
-        while(false !== ($parent = get_parent_class($parent))){
-            $result[]   = $parent;
-        }
-
-        $result = array_map($result, class_implements($class));
-
-        return array_unique($result);
+    public function __construct(ListenerIdGeneratorInterface $idGenerator){
+        $this->idGenerator  = $idGenerator ?? new ListenerIdGenerator();
     }
 
     /**
-     * イベントリスナーを追加する
+     * Get ListenerIdGeneratorInterface instance.
+     *
+     * @return  ListenerIdGeneratorInterface
+     */
+    protected function getListenerIdGenerator(): ListenerIdGeneratorInterface{
+        return $this->idGenerator;
+    }
+
+    /**
+     * Get Listener instance.
+     *
+     * If the listener is not registered, get the newly registered one.
      *
      * @param   callable    $listener
-     *  イベントリスナーとして機能するコールバック
      *
-     * @return  $this
+     * @return  Listener
      */
-    public function addListener(callable $listener){
-        $id         = bin2hex(random_bytes(5));
-        $listener   = new Listener($listener);
+    public function listener(callable $listener): Listener{
+        $id = $this->getListenerIdGenerator()->generate($listener);
 
-        foreach(static::getSuperClasses($listener->getAllowdEvent()) as $class){
-            if(!array_key_exists($class, $this->relations)){
-                $this->relations[$class]    = [];
+        if(!array_key_exists($id, $this->listeners)){
+            if(
+                is_array($listener)
+                && is_string($listener[0])
+                && false !== strpos($listener[1], "::")
+            ){
+                // ["SubClass", "parent::foo"] ["Class", self::bar]
+                // If allow this, will have to use call_user_func without fail.
+                // can not call the listener like $listener($event).
+                throw new \InvalidArgumentException();
             }
 
-            $this->relations[$class][]  = $id;
+            $this->listeners[$id]   = new Listener($listener);
         }
 
-        $this->listeners[$id]   = $listener;
+        return $this->listeners[$id];
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getListenersForEvent(EventInterface $event): iterable{
-        $idList = [];
+    public function getListenersForEvent(object $event) : iterable{
+        $eventClass = get_class($event);
 
-        foreach(static::getSuperClasses(get_class($event)) as $class){
-            if(!array_key_exists($class, $this->relations)){
-                continue;
-            }
-
-            foreach($this->relations[$class] as $id){
-                if(
-                    array_key_exists($id, $idList)
-                    || !array_key_exists($id, $this->listeners)
-                ){
-                    continue;
-                }
-
-                $idList[$id]    = true;
-
-                yield $this->listeners[$id]->getListener();
+        foreach($this->listeners as $listener){
+            if($listener->isListenEventClass($eventClass)){
+                yield $listener->getListener();
             }
         }
     }

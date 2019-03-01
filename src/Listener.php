@@ -13,9 +13,6 @@
  */
 namespace Fratily\EventDispatcher;
 
-use Fratily\Reflection\ReflectionCallable;
-use Psr\EventDispatcher\EventInterface;
-
 /**
  *
  */
@@ -24,12 +21,64 @@ class Listener{
     /**
      * @var callable
      */
-    private $listener;
+    private $callback;
 
     /**
-     * @var string
+     * @var bool[]
      */
-    private $allowEvent;
+    private $listenEvents   = [];
+
+    /**
+     * Get ReflectionFunction or ReflectionMethod
+     *
+     * @param   callable    $callable
+     *
+     * @return  \ReflectionFunctionAbstract
+     */
+    private static function getReflection(callable $callable): \ReflectionFunctionAbstract{
+        try{
+            if(is_string($callable)){
+                if(false === strpos($callable, "::")){
+                    return new \ReflectionFunction($callable);
+                }
+
+                return new \ReflectionMethod($callable);
+            }
+
+            if(is_object($callable)){
+                return new \ReflectionMethod($callable, "__invoke");
+            }
+
+            if(!is_array($callable)){
+                throw new \LogicException();
+            }
+
+            if(false !== strpos($callable[1], "::")){
+                $callable[1]    = explode("::", $callable[1], 2)[1];
+            }
+
+            return new \ReflectionMethod($callable[0], $callable[1]);
+        }catch(\ReflectionException $e){
+            throw new \LogicException($e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Get relation class name list.
+     *
+     * @param   \ReflectionClass    $class
+     *
+     * @return  string[]
+     */
+    private static function getRelationClasses(\ReflectionClass $class): array{
+        $classes    = array_values($class->getInterfaceNames());
+
+        do{
+            $classes[]  = $class->getName();
+        }while(false !== ($class = $class->getParentClass()));
+
+        return $classes;
+    }
 
     /**
      * Constructor
@@ -38,72 +87,120 @@ class Listener{
      *  リスナーのコールバック
      */
     public function __construct(callable $listener){
-        $reflection = (new ReflectionCallable($listener))->getReflection();
+        $function   = self::getReflection($listener);
 
-        if(0 === count($reflection->getParameters())){
-            throw new \InvalidArgumentException(
-                "Listener must have one parameter."
-            );
+        if(0 === $function->getNumberOfParameters()){
+            throw new \InvalidArgumentException();
         }
 
-        if(
-            1 < count($reflection->getParameters())
-            && !$reflection->getParameters()[1]->isDefaultValueAvailable()
-        ){
-            throw new \InvalidArgumentException(
-                "More than one parameter is specified, and the second and"
-                . " subsequent parameters are not optional."
-            );
+        if(1 < $function->getNumberOfRequiredParameters()){
+            throw new \InvalidArgumentException();
         }
 
-        $parameter  = $reflection->getParameters()[0];
+        $parameter  = $function->getParameters()[0];
 
         if(!$parameter->hasType() || $parameter->getType()->isBuiltin()){
-            throw new \InvalidArgumentException(
-                "For the listener's first parameter, must specify the class"
-                . " name type."
-            );
+            throw new \InvalidArgumentException();
         }
 
         try{
-            $class  = $parameter->getClass();
+            $type   = $parameter->getClass();
         }catch(\ReflectionException $e){
-            throw new \InvalidArgumentException(
-                "A class type that can not resolved is specified as the first"
-                    . " parameter of the listener."
-                ,
-                0,
+            throw new \LogicException(
+                sprintf("%s (in %s %d)", $e->getMessage(), $function->getFileName(), $function->getStartLine()),
+                $e->getCode(),
                 $e
             );
         }
 
-        if(!$class->implementsInterface(EventInterface::class)){
-            $event  = EventInterface::class;
-            throw new \InvalidArgumentException(
-                "The listener's first parameter must request a class"
-                . " implementhing {$event}."
-            );
-        }
+        $this->callback     = $listener;
+        $this->listenEvents = [];
 
-        $this->listener     = $listener;
-        $this->allowEvent   = $class->getName();
+        foreach(self::getRelationClasses($type) as $listenEvent){
+            $this->listenEvents[$listenEvent]   = true;
+        }
     }
 
     /**
-     * リスナーのコールバックを取得する
+     * Get callback.
      *
      * @return  callable
      */
-    public function getListener(){
+    public function getListener(): callable{
+        return $this->callback;
+    }
+
+    /**
+     * Get listen event names.
+     *
+     * @return  string[]
+     */
+    public function getListenEvents(): array{
+        return array_keys(array_filter($this->listenEvents));
+    }
+
+    /**
+     * Is listen event class.
+     *
+     * @param   string  $class
+     *
+     * @return  bool
+     */
+    public function isListenEventClass(string $class): bool{
+        return array_key_exists($class, $this->listenEvents)
+            && $this->listenEvents[$class]
+        ;
+    }
+
+    /**
+     * Add listen event.
+     *
+     * @param   string  $class  Listen event class.
+     * @param   bool    $withRelationClass  Add super class and implements interfaces.
+     *
+     * @return  $this
+     */
+    public function listen(string $class, bool $withRelationClass = true){
+        try{
+            $class = new \ReflectionClass($class);
+        }catch(\ReflectionException $e){
+            throw new \InvalidArgumentException($e->getMessage(), $e->getCode(), $e);
+        }
+
+        $this->listenEvents[$class->getName()]  = true;
+
+        if($withRelationClass){
+            foreach(self::getRelationClasses($class) as $relationClass){
+                $this->listenEvents[$relationClass] = true;
+            }
+        }
+
         return $this;
     }
 
     /**
-     * リスナーが要求するイベントクラスを取得する
+     * Remove listen event.
      *
-     * @return  string
+     * @param   string  $class  Unlisten event class.
+     * @param   bool    $withRelationClass  Remove super class and implements interfaces.
+     *
+     * @return  $this
      */
-    public function getAllowdEvent(){
-        return $this->allowEvent;
+    public function unlisten(string $class, bool $withRelationClass = true){
+        try{
+            $class = new \ReflectionClass($class);
+        }catch(\ReflectionException $e){
+            throw new \InvalidArgumentException($e->getMessage(), $e->getCode(), $e);
+        }
+
+        $this->listenEvents[$class->getName()]  = false;
+
+        if($withRelationClass){
+            foreach(self::getRelationClasses($class) as $relationClass){
+                $this->listenEvents[$relationClass] = false;
+            }
+        }
+
+        return $this;
     }
 }
