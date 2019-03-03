@@ -31,23 +31,6 @@ class ListenerProvider implements ListenerProviderInterface{
     private $listeners  = [];
 
     /**
-     * Get relation class name list.
-     *
-     * @param   \ReflectionClass    $class
-     *
-     * @return  string[]
-     */
-    private static function getRelationClasses(\ReflectionClass $class): array{
-        $classes    = array_values($class->getInterfaceNames());
-
-        do{
-            $classes[]  = $class->getName();
-        }while(false !== ($class = $class->getParentClass()));
-
-        return $classes;
-    }
-
-    /**
      * Constructor.
      *
      * @param   ListenerIdGeneratorInterface    $idGenerator
