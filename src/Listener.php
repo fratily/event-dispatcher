@@ -18,6 +18,8 @@ namespace Fratily\EventDispatcher;
  */
 class Listener{
 
+    const DEFAULT_PRIORITY  = 0;
+
     /**
      * @var callable
      */
@@ -26,7 +28,7 @@ class Listener{
     /**
      * @var bool[]
      */
-    private $listenEvents   = [];
+    private $listenEventPriorities  = [];
 
     /**
      * Get ReflectionFunction or ReflectionMethod
@@ -64,29 +66,12 @@ class Listener{
     }
 
     /**
-     * Get relation class name list.
-     *
-     * @param   \ReflectionClass    $class
-     *
-     * @return  string[]
-     */
-    private static function getRelationClasses(\ReflectionClass $class): array{
-        $classes    = array_values($class->getInterfaceNames());
-
-        do{
-            $classes[]  = $class->getName();
-        }while(false !== ($class = $class->getParentClass()));
-
-        return $classes;
-    }
-
-    /**
      * Constructor
      *
-     * @param   callable    $listener
-     *  リスナーのコールバック
+     * @param   callable    $listener   Listener callback.
+     * @param   int $priority   Event execute priority.
      */
-    public function __construct(callable $listener){
+    public function __construct(callable $listener, int $priority = self::DEFAULT_PRIORITY){
         $function   = self::getReflection($listener);
 
         if(0 === $function->getNumberOfParameters()){
@@ -114,11 +99,8 @@ class Listener{
         }
 
         $this->callback     = $listener;
-        $this->listenEvents = [];
 
-        foreach(self::getRelationClasses($type) as $listenEvent){
-            $this->listenEvents[$listenEvent]   = true;
-        }
+        $this->listen($type->getName(), $priority);
     }
 
     /**
@@ -136,7 +118,14 @@ class Listener{
      * @return  string[]
      */
     public function getListenEvents(): array{
-        return array_keys(array_filter($this->listenEvents));
+        return array_keys(
+            array_filter(
+                $this->listenEventPriorities,
+                function($v){
+                    return $v !== null;
+                }
+            )
+        );
     }
 
     /**
@@ -147,8 +136,8 @@ class Listener{
      * @return  bool
      */
     public function isListenEventClass(string $class): bool{
-        return array_key_exists($class, $this->listenEvents)
-            && $this->listenEvents[$class]
+        return array_key_exists($class, $this->listenEventPriorities)
+            && null !== $this->listenEventPriorities[$class]
         ;
     }
 
@@ -156,50 +145,18 @@ class Listener{
      * Add listen event.
      *
      * @param   string  $class  Listen event class.
-     * @param   bool    $withRelationClass  Add super class and implements interfaces.
+     * @param   int|null    $priority   Event execute priority. If set null, this event to unsubscribe.
      *
      * @return  $this
      */
-    public function listen(string $class, bool $withRelationClass = true){
+    public function listen(string $class, ?int $priority = self::DEFAULT_PRIORITY){
         try{
             $class = new \ReflectionClass($class);
         }catch(\ReflectionException $e){
             throw new \InvalidArgumentException($e->getMessage(), $e->getCode(), $e);
         }
 
-        $this->listenEvents[$class->getName()]  = true;
-
-        if($withRelationClass){
-            foreach(self::getRelationClasses($class) as $relationClass){
-                $this->listenEvents[$relationClass] = true;
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * Remove listen event.
-     *
-     * @param   string  $class  Unlisten event class.
-     * @param   bool    $withRelationClass  Remove super class and implements interfaces.
-     *
-     * @return  $this
-     */
-    public function unlisten(string $class, bool $withRelationClass = true){
-        try{
-            $class = new \ReflectionClass($class);
-        }catch(\ReflectionException $e){
-            throw new \InvalidArgumentException($e->getMessage(), $e->getCode(), $e);
-        }
-
-        $this->listenEvents[$class->getName()]  = false;
-
-        if($withRelationClass){
-            foreach(self::getRelationClasses($class) as $relationClass){
-                $this->listenEvents[$relationClass] = false;
-            }
-        }
+        $this->listenEventPriorities[$class->getName()] = $priority;
 
         return $this;
     }
