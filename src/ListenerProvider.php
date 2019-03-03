@@ -31,6 +31,23 @@ class ListenerProvider implements ListenerProviderInterface{
     private $listeners  = [];
 
     /**
+     * Get relation class name list.
+     *
+     * @param   \ReflectionClass    $class
+     *
+     * @return  string[]
+     */
+    private static function getRelationClasses(\ReflectionClass $class): array{
+        $classes    = array_values($class->getInterfaceNames());
+
+        do{
+            $classes[]  = $class->getName();
+        }while(false !== ($class = $class->getParentClass()));
+
+        return $classes;
+    }
+
+    /**
      * Constructor.
      *
      * @param   ListenerIdGeneratorInterface    $idGenerator
@@ -84,12 +101,26 @@ class ListenerProvider implements ListenerProviderInterface{
      * {@inheritdoc}
      */
     public function getListenersForEvent(object $event) : iterable{
-        $eventClass = get_class($event);
+        $priorityQueue  = new class() extends \SplPriorityQueue{
+            public function compare($priority1, $priority2){
+                return $priority1 <=> $priority2;
+            }
+        };
 
         foreach($this->listeners as $listener){
-            if($listener->isListenEventClass($eventClass)){
-                yield $listener->getListener();
+            if(
+                $listener->isEnabled()
+                && (
+                    get_class($event) === $listener->getListenEventClass()
+                    || is_subclass_of($event, $listener->getListenEventClass())
+                )
+            ){
+                $priorityQueue->insert($listener->getListener(), $listener->getPriority());
             }
+        }
+
+        foreach($priorityQueue as $value){
+            yield $value;
         }
     }
 }

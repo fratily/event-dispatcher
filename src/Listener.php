@@ -19,6 +19,7 @@ namespace Fratily\EventDispatcher;
 class Listener{
 
     const DEFAULT_PRIORITY  = 0;
+    const DEFAULT_ENABLED   = true;
 
     /**
      * @var callable
@@ -26,9 +27,19 @@ class Listener{
     private $callback;
 
     /**
-     * @var bool[]
+     * @var string
      */
-    private $listenEventPriorities  = [];
+    private $listen;
+
+    /**
+     * @var int
+     */
+    private $priority   = self::DEFAULT_PRIORITY;
+
+    /**
+     * @var bool
+     */
+    private $isEnabled  = self::DEFAULT_ENABLED;
 
     /**
      * Get ReflectionFunction or ReflectionMethod
@@ -98,9 +109,9 @@ class Listener{
             );
         }
 
-        $this->callback     = $listener;
-
-        $this->listen($type->getName(), $priority);
+        $this->callback = $listener;
+        $this->listen   = $type->getName();
+        $this->priority = $priority;
     }
 
     /**
@@ -113,50 +124,63 @@ class Listener{
     }
 
     /**
-     * Get listen event names.
+     * Get listen event class name.
      *
-     * @return  string[]
+     * @return  string
      */
-    public function getListenEvents(): array{
-        return array_keys(
-            array_filter(
-                $this->listenEventPriorities,
-                function($v){
-                    return $v !== null;
-                }
-            )
-        );
+    public function getListenEventClass(): ?string{
+        return $this->isEnabled ? $this->listen : null;
     }
 
     /**
-     * Is listen event class.
+     * Get event subscribe priority.
      *
-     * @param   string  $class
-     *
-     * @return  bool
+     * @return  int
      */
-    public function isListenEventClass(string $class): bool{
-        return array_key_exists($class, $this->listenEventPriorities)
-            && null !== $this->listenEventPriorities[$class]
-        ;
+    public function getPriority(): int{
+        return $this->priority;
     }
 
     /**
-     * Add listen event.
+     * Set priority.
      *
-     * @param   string  $class  Listen event class.
-     * @param   int|null    $priority   Event execute priority. If set null, this event to unsubscribe.
+     * @param   int $priority
      *
      * @return  $this
      */
-    public function listen(string $class, ?int $priority = self::DEFAULT_PRIORITY){
-        try{
-            $class = new \ReflectionClass($class);
-        }catch(\ReflectionException $e){
-            throw new \InvalidArgumentException($e->getMessage(), $e->getCode(), $e);
-        }
+    public function setPriority(int $priority): self{
+        $this->priority = $priority;
 
-        $this->listenEventPriorities[$class->getName()] = $priority;
+        return $this;
+    }
+
+    /**
+     * Get is enabled.
+     *
+     * @return  bool
+     */
+    public function isEnabled(): bool{
+        return $this->isEnabled;
+    }
+
+    /**
+     * Set enabled.
+     *
+     * @return  $this
+     */
+    public function enable(): self{
+        $this->isEnabled    = true;
+
+        return $this;
+    }
+
+    /**
+     * Set disabled.
+     *
+     * @return  $this
+     */
+    public function disable(): self{
+        $this->isEnabled    = false;
 
         return $this;
     }
