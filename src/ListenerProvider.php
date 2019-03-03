@@ -70,6 +70,8 @@ class ListenerProvider implements ListenerProviderInterface{
                 // If allow this, will have to use call_user_func without fail.
                 // can not call the listener like $listener($event).
                 throw new \InvalidArgumentException();
+
+                // Other solution: Correct the class name with "self ::" or "parent ::"
             }
 
             $this->listeners[$id]   = new Listener($listener);
