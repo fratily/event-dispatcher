@@ -84,11 +84,7 @@ class ListenerProvider implements ListenerProviderInterface{
      * {@inheritdoc}
      */
     public function getListenersForEvent(object $event) : iterable{
-        $priorityQueue  = new class() extends \SplPriorityQueue{
-            public function compare($priority1, $priority2){
-                return $priority1 <=> $priority2;
-            }
-        };
+        $queue  = new \SplPriorityQueue();
 
         foreach($this->listeners as $listener){
             if(
@@ -98,11 +94,11 @@ class ListenerProvider implements ListenerProviderInterface{
                     || is_subclass_of($event, $listener->getListenEventClass())
                 )
             ){
-                $priorityQueue->insert($listener->getListener(), $listener->getPriority());
+                $queue->insert($listener->getListener(), $listener->getPriority());
             }
         }
 
-        foreach($priorityQueue as $value){
+        foreach($queue as $value){
             yield $value;
         }
     }
