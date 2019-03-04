@@ -16,5 +16,5 @@ namespace Fratily\EventDispatcher\Exception;
 /**
  *
  */
-class ListenerUnexpectedResultException extends \UnexpectedValueException{
+class InvalidParameterTypeException extends \InvalidArgumentException{
 }

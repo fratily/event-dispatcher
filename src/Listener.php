@@ -13,6 +13,8 @@
  */
 namespace Fratily\EventDispatcher;
 
+use Fratily\EventDispatcher\Exception\InvalidParameterTypeException;
+
 /**
  *
  */
@@ -81,22 +83,32 @@ class Listener{
      *
      * @param   callable    $listener   Listener callback.
      * @param   int $priority   Event execute priority.
+     *
+     * @throws  Exception\TooFewParametersException
+     * @throws  Exception\TooManyRequiredParametersException
+     * @throws  Exception\InvalidParameterTypeException
      */
     public function __construct(callable $listener, int $priority = self::DEFAULT_PRIORITY){
         $function   = self::getReflection($listener);
 
         if(0 === $function->getNumberOfParameters()){
-            throw new \InvalidArgumentException();
+            throw new Exception\TooFewParametersException(
+                "Listeners must have only one required parameter."
+            );
         }
 
         if(1 < $function->getNumberOfRequiredParameters()){
-            throw new \InvalidArgumentException();
+            throw new Exception\TooManyRequiredParametersException(
+                "Listeners must have only one required parameter."
+            );
         }
 
         $parameter  = $function->getParameters()[0];
 
         if(!$parameter->hasType() || $parameter->getType()->isBuiltin()){
-            throw new \InvalidArgumentException();
+            throw new Exception\InvalidParameterTypeException(
+                "The listener's first argument must explicitly state the event class type."
+            );
         }
 
         try{
