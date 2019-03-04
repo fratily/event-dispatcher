@@ -13,7 +13,7 @@
  */
 namespace Fratily\EventDispatcher;
 
-use Fratily\EventDispatcher\Exception\CaughtException;
+use Fratily\EventDispatcher\Event\CaughtException;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\EventDispatcher\ListenerProviderInterface;
 use Psr\EventDispatcher\StoppableEventInterface;
