@@ -5,7 +5,8 @@
     "keywords": [
         "fratily",
         "psr-14",
-        "event-dispatcher"
+        "event-dispatcher",
+        "events"
     ],
     "authors": [
         {
