@@ -13,6 +13,7 @@
  */
 namespace Fratily\EventDispatcher;
 
+use Fratily\EventDispatcher\Exception\CaughtException;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\EventDispatcher\ListenerProviderInterface;
 use Psr\EventDispatcher\StoppableEventInterface;
@@ -58,6 +59,8 @@ class EventDispatcher implements EventDispatcherInterface{
             try{
                 call_user_func($listener, $event);
             }catch(\Throwable $e){
+                $this->dispatch(new CaughtException($e));
+
                 throw $e;
             }
         }
