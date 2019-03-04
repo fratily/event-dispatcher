@@ -33,9 +33,9 @@ class ListenerProvider implements ListenerProviderInterface{
     /**
      * Constructor.
      *
-     * @param   ListenerIdGeneratorInterface    $idGenerator
+     * @param   ListenerIdGeneratorInterface|null   $idGenerator
      */
-    public function __construct(ListenerIdGeneratorInterface $idGenerator){
+    public function __construct(ListenerIdGeneratorInterface $idGenerator = null){
         $this->idGenerator  = $idGenerator ?? new ListenerIdGenerator();
     }
 
