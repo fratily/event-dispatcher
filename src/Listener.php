@@ -13,187 +13,47 @@
  */
 namespace Fratily\EventDispatcher;
 
-use Fratily\EventDispatcher\Exception\InvalidParameterTypeException;
-
 /**
  *
  */
 class Listener{
 
-    const DEFAULT_PRIORITY  = 0;
-    const DEFAULT_ENABLED   = true;
-
     /**
      * @var callable
      */
-    private $callback;
-
-    /**
-     * @var string
-     */
-    private $listen;
+    private $listener;
 
     /**
      * @var int
      */
-    private $priority   = self::DEFAULT_PRIORITY;
+    private $priority;
 
     /**
-     * @var bool
+     * Constructor.
+     *
+     * @param callable $listener
+     * @param int      $priority
      */
-    private $isEnabled  = self::DEFAULT_ENABLED;
-
-    /**
-     * Get ReflectionFunction or ReflectionMethod
-     *
-     * @param   callable    $callable
-     *
-     * @return  \ReflectionFunctionAbstract
-     */
-    private static function getReflection(callable $callable): \ReflectionFunctionAbstract{
-        try{
-            if(is_string($callable)){
-                if(false === strpos($callable, "::")){
-                    return new \ReflectionFunction($callable);
-                }
-
-                return new \ReflectionMethod($callable);
-            }
-
-            if(is_object($callable)){
-                return new \ReflectionMethod($callable, "__invoke");
-            }
-
-            if(!is_array($callable)){
-                throw new \LogicException();
-            }
-
-            if(false !== strpos($callable[1], "::")){
-                $callable[1]    = explode("::", $callable[1], 2)[1];
-            }
-
-            return new \ReflectionMethod($callable[0], $callable[1]);
-        }catch(\ReflectionException $e){
-            throw new \LogicException($e->getMessage(), $e->getCode(), $e);
-        }
-    }
-
-    /**
-     * Constructor
-     *
-     * @param   callable    $listener   Listener callback.
-     * @param   int $priority   Event execute priority.
-     *
-     * @throws  Exception\TooFewParametersException
-     * @throws  Exception\TooManyRequiredParametersException
-     * @throws  Exception\InvalidParameterTypeException
-     */
-    public function __construct(callable $listener, int $priority = self::DEFAULT_PRIORITY){
-        $function   = self::getReflection($listener);
-
-        if(0 === $function->getNumberOfParameters()){
-            throw new Exception\TooFewParametersException(
-                "Listeners must have only one required parameter."
-            );
-        }
-
-        if(1 < $function->getNumberOfRequiredParameters()){
-            throw new Exception\TooManyRequiredParametersException(
-                "Listeners must have only one required parameter."
-            );
-        }
-
-        $parameter  = $function->getParameters()[0];
-
-        if(!$parameter->hasType() || $parameter->getType()->isBuiltin()){
-            throw new Exception\InvalidParameterTypeException(
-                "The listener's first argument must explicitly state the event class type."
-            );
-        }
-
-        try{
-            $type   = $parameter->getClass();
-        }catch(\ReflectionException $e){
-            throw new \LogicException(
-                sprintf("%s (in %s %d)", $e->getMessage(), $function->getFileName(), $function->getStartLine()),
-                $e->getCode(),
-                $e
-            );
-        }
-
-        $this->callback = $listener;
-        $this->listen   = $type->getName();
+    public function __construct(callable $listener, int $priority){
+        $this->listener = $listener;
         $this->priority = $priority;
     }
 
     /**
-     * Get callback.
+     * Get listener.
      *
-     * @return  callable
+     * @return callable
      */
     public function getListener(): callable{
-        return $this->callback;
+        return $this->listener;
     }
 
     /**
-     * Get listen event class name.
+     * Get priority.
      *
-     * @return  string
-     */
-    public function getListenEventClass(): ?string{
-        return $this->isEnabled ? $this->listen : null;
-    }
-
-    /**
-     * Get event subscribe priority.
-     *
-     * @return  int
+     * @return int
      */
     public function getPriority(): int{
         return $this->priority;
-    }
-
-    /**
-     * Set priority.
-     *
-     * @param   int $priority
-     *
-     * @return  $this
-     */
-    public function setPriority(int $priority): self{
-        $this->priority = $priority;
-
-        return $this;
-    }
-
-    /**
-     * Get is enabled.
-     *
-     * @return  bool
-     */
-    public function isEnabled(): bool{
-        return $this->isEnabled;
-    }
-
-    /**
-     * Set enabled.
-     *
-     * @return  $this
-     */
-    public function enable(): self{
-        $this->isEnabled    = true;
-
-        return $this;
-    }
-
-    /**
-     * Set disabled.
-     *
-     * @return  $this
-     */
-    public function disable(): self{
-        $this->isEnabled    = false;
-
-        return $this;
     }
 }

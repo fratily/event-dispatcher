@@ -13,6 +13,7 @@
  */
 namespace Fratily\EventDispatcher;
 
+use Fratily\Reflection\ReflectionCallable;
 use Psr\EventDispatcher\ListenerProviderInterface;
 
 /**
@@ -21,80 +22,91 @@ use Psr\EventDispatcher\ListenerProviderInterface;
 class ListenerProvider implements ListenerProviderInterface{
 
     /**
-     * @var ListenerIdGeneratorInterface
+     * @var Listener[][]
      */
-    private $idGenerator;
+    private $listenersByParameter   = [];
 
     /**
-     * @var Listener[]
+     * Add event listener.
+     *
+     * @param callable    $listener
+     * @param int         $priority
+     * @param string|null $event
+     *
+     * @return $this
      */
-    private $listeners  = [];
-
-    /**
-     * Constructor.
-     *
-     * @param   ListenerIdGeneratorInterface|null   $idGenerator
-     */
-    public function __construct(ListenerIdGeneratorInterface $idGenerator = null){
-        $this->idGenerator  = $idGenerator ?? new ListenerIdGenerator();
-    }
-
-    /**
-     * Get ListenerIdGeneratorInterface instance.
-     *
-     * @return  ListenerIdGeneratorInterface
-     */
-    protected function getListenerIdGenerator(): ListenerIdGeneratorInterface{
-        return $this->idGenerator;
-    }
-
-    /**
-     * Get Listener instance.
-     *
-     * If the listener is not registered, get the newly registered one.
-     *
-     * @param   callable    $listener
-     *
-     * @return  Listener
-     */
-    public function listener(callable $listener): Listener{
-        $id = $this->getListenerIdGenerator()->generate($listener);
-
-        if(!array_key_exists($id, $this->listeners)){
-            if(
-                is_array($listener)
-                && is_string($listener[0])
-                && false !== strpos($listener[1], "::")
-            ){
-                // ["SubClass", "parent::foo"] ["Class", self::bar]
-                // If allow this, will have to use call_user_func without fail.
-                // can not call the listener like $listener($event).
-                throw new \InvalidArgumentException();
-
-                // Other solution: Correct the class name with "self ::" or "parent ::"
-            }
-
-            $this->listeners[$id]   = new Listener($listener);
+    public function add(
+        callable $listener,
+        int $priority = 0,
+        string $event = null
+    ): ListenerProvider{
+        if(null !== $event && !class_exists($event)){
+            throw new \InvalidArgumentException(
+                "class '{$event}' not found."
+            );
         }
 
-        return $this->listeners[$id];
+        $parameter = (new ReflectionCallable($listener))
+            ->getReflection()
+            ->getParameters()[0] ?? null
+        ;
+
+        $type   = null === $parameter ? null : $parameter->getType();
+        $class  = $parameter->getClass();
+
+        if(null !== $class){
+            return $this->addListener(
+                $class->getName(),
+                new Listener($listener, $priority)
+            );
+        }
+
+        if(null === $event){
+            throw new \InvalidArgumentException();
+        }
+
+        if(null !== $type){
+            if("object" !== (string)$type){
+                throw new \InvalidArgumentException();
+            }
+        }
+
+        return $this->addListener(
+            $event,
+            new Listener($listener, $priority)
+        );
+    }
+
+    /**
+     * Add event listener from listener object.
+     *
+     * @param string   $event
+     * @param Listener $listener
+     *
+     * @return $this
+     */
+    protected function addListener(string $event, Listener $listener): ListenerProvider{
+        if(!isset($this->listenersByParameter[$event])){
+            $this->listenersByParameter[$event] = [];
+        }
+
+        $this->listenersByParameter[$event][]   = $listener;
+
+        return $this;
     }
 
     /**
      * {@inheritdoc}
      */
     public function getListenersForEvent(object $event) : iterable{
-        $queue  = new \SplPriorityQueue();
+        $queue      = new \SplPriorityQueue();
+        $eventClass = get_class($event);
 
-        foreach($this->listeners as $listener){
-            if(
-                $listener->isEnabled()
-                && (
-                    get_class($event) === $listener->getListenEventClass()
-                    || is_subclass_of($event, $listener->getListenEventClass())
-                )
-            ){
-                $queue->insert($listener->getListener(), $listener->getPriority());
+        foreach($this->listenersByParameter as $listen => $listeners){
+            if($listen === $eventClass || is_subclass_of($eventClass, $listen)){
+                foreach($listeners as $listener){
+                    $queue->insert($listener->getListener(), $listener->getPriority());
+                }
             }
         }
 

@@ -16,7 +16,8 @@
     "license": "MIT",
     "require": {
         "php": "^7.2",
-        "psr/event-dispatcher": "^1.0"
+        "psr/event-dispatcher": "^1.0",
+        "fratily/reflection": "^0.4.2"
     },
     "autoload": {
         "psr-4": {
