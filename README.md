@@ -14,12 +14,12 @@ $ composer require fratily/event-dispatcher
 $provider   = new Fratily\EventDispatcher\ListenerProvider();
 $dispatcher = new Fratily\EventDispatcher\EventDispatcher($provider);
 
-$provider->listen(function(SampleEvent $event){/* listener A */}); // Default priority 0
-$provider->listen(function(SampleEvent $event){/* listener B */})->setPriority(10);
-$provider->listen(function(SampleEvent $event){/* listener C */})->setPriority(20);
-$provider->listen(function(SampleEvent $event){/* listener D */})->setPriority(-10);
-$provider->listen(function(SampleEvent $event){/* listener E */})->setPriority(-20);
-$provider->listen(function(SampleEvent $event){/* listener F */}); // Default priority 0
+$provider->listen(function(SampleEvent $event){/* A */});
+$provider->listen(function(SampleEvent $event){/* B */}, 10);
+$provider->listen(function(SampleEvent $event){/* C */}, 20);
+$provider->listen(function(SampleEvent $event){/* D */}, -10);
+$provider->listen(function(SampleEvent $event){/* E */}, -20);
+$provider->listen(function(SampleEvent $event){/* F */});
 
 $event  = new SampleEvent();
 
