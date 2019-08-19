@@ -21,8 +21,8 @@ use Psr\EventDispatcher\StoppableEventInterface;
 /**
  *
  */
-class EventDispatcher implements EventDispatcherInterface{
-
+class EventDispatcher implements EventDispatcherInterface
+{
     /**
      * @var ListenerProviderInterface
      */
@@ -33,32 +33,34 @@ class EventDispatcher implements EventDispatcherInterface{
      *
      * @param   ListenerProviderInterface   $listenerProvider
      */
-    public function __construct(ListenerProviderInterface $listenerProvider){
+    public function __construct(ListenerProviderInterface $listenerProvider)
+    {
         $this->listenerProvider = $listenerProvider;
     }
 
     /**
      * Get listener provider.
      */
-    protected function getListenerProvider(): ListenerProviderInterface{
+    protected function getListenerProvider(): ListenerProviderInterface
+    {
         return $this->listenerProvider;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function dispatch(object $event){
-        foreach($this->listenerProvider->getListenersForEvent($event) as $listener){
-            if(
-                $event instanceof StoppableEventInterface
+    public function dispatch(object $event)
+    {
+        foreach ($this->listenerProvider->getListenersForEvent($event) as $listener) {
+            if ($event instanceof StoppableEventInterface
                 && $event->isPropagationStopped()
-            ){
+            ) {
                 break;
             }
 
-            try{
+            try {
                 call_user_func($listener, $event);
-            }catch(\Throwable $e){
+            } catch (\Throwable $e) {
                 $this->dispatch(new CaughtException($e));
 
                 throw $e;

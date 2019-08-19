@@ -16,5 +16,6 @@ namespace Fratily\EventDispatcher\Exception;
 /**
  *
  */
-class TooFewParametersException extends \InvalidArgumentException{
+class TooFewParametersException extends \InvalidArgumentException
+{
 }

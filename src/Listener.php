@@ -16,8 +16,8 @@ namespace Fratily\EventDispatcher;
 /**
  *
  */
-class Listener{
-
+class Listener
+{
     /**
      * @var callable
      */
@@ -34,7 +34,8 @@ class Listener{
      * @param callable $listener
      * @param int      $priority
      */
-    public function __construct(callable $listener, int $priority){
+    public function __construct(callable $listener, int $priority)
+    {
         $this->listener = $listener;
         $this->priority = $priority;
     }
@@ -44,7 +45,8 @@ class Listener{
      *
      * @return callable
      */
-    public function getListener(): callable{
+    public function getListener(): callable
+    {
         return $this->listener;
     }
 
@@ -53,7 +55,8 @@ class Listener{
      *
      * @return int
      */
-    public function getPriority(): int{
+    public function getPriority(): int
+    {
         return $this->priority;
     }
 }

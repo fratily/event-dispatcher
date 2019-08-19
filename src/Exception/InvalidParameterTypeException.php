@@ -16,5 +16,6 @@ namespace Fratily\EventDispatcher\Exception;
 /**
  *
  */
-class InvalidParameterTypeException extends \InvalidArgumentException{
+class InvalidParameterTypeException extends \InvalidArgumentException
+{
 }

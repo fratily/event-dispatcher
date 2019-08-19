@@ -19,8 +19,8 @@ use Psr\EventDispatcher\ListenerProviderInterface;
 /**
  *
  */
-class ListenerProvider implements ListenerProviderInterface{
-
+class ListenerProvider implements ListenerProviderInterface
+{
     /**
      * @var Listener[][]
      */
@@ -39,8 +39,8 @@ class ListenerProvider implements ListenerProviderInterface{
         callable $listener,
         int $priority = 0,
         string $event = null
-    ): ListenerProvider{
-        if(null !== $event && !class_exists($event)){
+    ): ListenerProvider {
+        if (null !== $event && !class_exists($event)) {
             throw new \InvalidArgumentException(
                 "class '{$event}' not found."
             );
@@ -54,19 +54,19 @@ class ListenerProvider implements ListenerProviderInterface{
         $type   = null === $parameter ? null : $parameter->getType();
         $class  = $parameter->getClass();
 
-        if(null !== $class){
+        if (null !== $class) {
             return $this->addListener(
                 $class->getName(),
                 new Listener($listener, $priority)
             );
         }
 
-        if(null === $event){
+        if (null === $event) {
             throw new \InvalidArgumentException();
         }
 
-        if(null !== $type){
-            if("object" !== (string)$type){
+        if (null !== $type) {
+            if ("object" !== (string)$type) {
                 throw new \InvalidArgumentException();
             }
         }
@@ -85,8 +85,9 @@ class ListenerProvider implements ListenerProviderInterface{
      *
      * @return $this
      */
-    protected function addListener(string $event, Listener $listener): ListenerProvider{
-        if(!isset($this->listenersByParameter[$event])){
+    protected function addListener(string $event, Listener $listener): ListenerProvider
+    {
+        if (!isset($this->listenersByParameter[$event])) {
             $this->listenersByParameter[$event] = [];
         }
 
@@ -98,19 +99,20 @@ class ListenerProvider implements ListenerProviderInterface{
     /**
      * {@inheritdoc}
      */
-    public function getListenersForEvent(object $event) : iterable{
+    public function getListenersForEvent(object $event) : iterable
+    {
         $queue      = new \SplPriorityQueue();
         $eventClass = get_class($event);
 
-        foreach($this->listenersByParameter as $listen => $listeners){
-            if($listen === $eventClass || is_subclass_of($eventClass, $listen)){
-                foreach($listeners as $listener){
+        foreach ($this->listenersByParameter as $listen => $listeners) {
+            if ($listen === $eventClass || is_subclass_of($eventClass, $listen)) {
+                foreach ($listeners as $listener) {
                     $queue->insert($listener->getListener(), $listener->getPriority());
                 }
             }
         }
 
-        foreach($queue as $value){
+        foreach ($queue as $value) {
             yield $value;
         }
     }

@@ -16,8 +16,8 @@ namespace Fratily\EventDispatcher\Event;
 /**
  *
  */
-class CaughtException{
-
+class CaughtException
+{
     /**
      * @var \Throwable
      */
@@ -28,7 +28,8 @@ class CaughtException{
      *
      * @param   \Throwable  $caught Caught exception.
      */
-    public function __construct(\Throwable $caught){
+    public function __construct(\Throwable $caught)
+    {
         $this->caught   = $caught;
     }
 
@@ -37,7 +38,8 @@ class CaughtException{
      *
      * @return  \Throwable
      */
-    public function getCaught(){
+    public function getCaught()
+    {
         return $this->caught;
     }
 }
