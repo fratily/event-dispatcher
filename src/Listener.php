@@ -31,8 +31,8 @@ class Listener
     /**
      * Constructor.
      *
-     * @param callable $listener
-     * @param int      $priority
+     * @param callable $listener The listener
+     * @param int      $priority The listener priority
      */
     public function __construct(callable $listener, int $priority)
     {
@@ -41,7 +41,7 @@ class Listener
     }
 
     /**
-     * Get listener.
+     * Returns the listener.
      *
      * @return callable
      */
@@ -51,7 +51,7 @@ class Listener
     }
 
     /**
-     * Get priority.
+     * Returns the listener priority.
      *
      * @return int
      */

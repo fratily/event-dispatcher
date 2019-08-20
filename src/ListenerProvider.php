@@ -24,74 +24,34 @@ class ListenerProvider implements ListenerProviderInterface
     /**
      * @var Listener[][]
      */
-    private $listenersByParameter   = [];
+    private $listenersByParameter = [];
 
     /**
-     * Add event listener.
+     * Add the event listener.
      *
-     * @param callable    $listener
-     * @param int         $priority
-     * @param string|null $event
+     * @param callable $listener The listener
+     * @param int      $priority The listener priority
      *
      * @return $this
      */
-    public function add(
-        callable $listener,
-        int $priority = 0,
-        string $event = null
-    ): ListenerProvider {
-        if (null !== $event && !class_exists($event)) {
-            throw new \InvalidArgumentException(
-                "class '{$event}' not found."
-            );
-        }
-
+    public function add(callable $listener, int $priority = 0): ListenerProvider
+    {
         $parameter = (new ReflectionCallable($listener))
             ->getReflection()
             ->getParameters()[0] ?? null
         ;
 
-        $type   = null === $parameter ? null : $parameter->getType();
-        $class  = $parameter->getClass();
-
-        if (null !== $class) {
-            return $this->addListener(
-                $class->getName(),
-                new Listener($listener, $priority)
-            );
-        }
-
-        if (null === $event) {
+        if (null === $parameter || null === $parameter->getClass()) {
             throw new \InvalidArgumentException();
         }
 
-        if (null !== $type) {
-            if ("object" !== (string)$type) {
-                throw new \InvalidArgumentException();
-            }
+        $eventClass = $parameter->getClass();
+
+        if (!isset($this->listenersByParameter[$eventClass->getName()])) {
+            $this->listenersByParameter[$eventClass->getName()] = [];
         }
 
-        return $this->addListener(
-            $event,
-            new Listener($listener, $priority)
-        );
-    }
-
-    /**
-     * Add event listener from listener object.
-     *
-     * @param string   $event
-     * @param Listener $listener
-     *
-     * @return $this
-     */
-    protected function addListener(string $event, Listener $listener): ListenerProvider
-    {
-        if (!isset($this->listenersByParameter[$event])) {
-            $this->listenersByParameter[$event] = [];
-        }
-
-        $this->listenersByParameter[$event][]   = $listener;
+        $this->listenersByParameter[$eventClass->getName()][] = new Listener($listener, $priority);
 
         return $this;
     }
@@ -101,19 +61,30 @@ class ListenerProvider implements ListenerProviderInterface
      */
     public function getListenersForEvent(object $event) : iterable
     {
-        $queue      = new \SplPriorityQueue();
-        $eventClass = get_class($event);
+        $listenerPriorityQueue = new \SplPriorityQueue();
+        $eventClass            = get_class($event);
+        $currentClass          = $eventClass;
+        $listenClasses         = class_implements($eventClass);
 
-        foreach ($this->listenersByParameter as $listen => $listeners) {
-            if ($listen === $eventClass || is_subclass_of($eventClass, $listen)) {
-                foreach ($listeners as $listener) {
-                    $queue->insert($listener->getListener(), $listener->getPriority());
-                }
+        do {
+            $listenClasses[] = $currentClass;
+        } while (null !== ($currentClass = get_parent_class($currentClass)));
+
+        foreach ($listenClasses as $listenClass) {
+            if (!isset($this->listenersByParameter[$listenClass])) {
+                continue;
+            }
+
+            foreach ($this->listenersByParameter[$listenClass] as $listener) {
+                $listenerPriorityQueue->insert(
+                    $listener->getListener(),
+                    $listener->getPriority()
+                );
             }
         }
 
-        foreach ($queue as $value) {
-            yield $value;
+        foreach ($listenerPriorityQueue as $listener) {
+            yield $listener;
         }
     }
 }

@@ -13,7 +13,7 @@
  */
 namespace Fratily\EventDispatcher;
 
-use Fratily\EventDispatcher\Event\CaughtException;
+use Fratily\EventDispatcher\Event\CaughtThrowableObjectEvent;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\EventDispatcher\ListenerProviderInterface;
 use Psr\EventDispatcher\StoppableEventInterface;
@@ -52,7 +52,8 @@ class EventDispatcher implements EventDispatcherInterface
     public function dispatch(object $event)
     {
         foreach ($this->listenerProvider->getListenersForEvent($event) as $listener) {
-            if ($event instanceof StoppableEventInterface
+            if (
+                $event instanceof StoppableEventInterface
                 && $event->isPropagationStopped()
             ) {
                 break;
@@ -61,9 +62,7 @@ class EventDispatcher implements EventDispatcherInterface
             try {
                 call_user_func($listener, $event);
             } catch (\Throwable $e) {
-                $this->dispatch(new CaughtException($e));
-
-                throw $e;
+                $this->dispatch(new CaughtThrowableObjectEvent($e));
             }
         }
 

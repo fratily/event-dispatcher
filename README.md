@@ -8,7 +8,7 @@ fratily/event-dispatcher is simple event dispatcher.
 $ composer require fratily/event-dispatcher
 ```
 
-## Uses
+## Usage
 
 ```php
 $provider   = new Fratily\EventDispatcher\ListenerProvider();
