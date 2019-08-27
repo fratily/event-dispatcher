@@ -63,6 +63,8 @@ class EventDispatcher implements EventDispatcherInterface
                 call_user_func($listener, $event);
             } catch (\Throwable $e) {
                 $this->dispatch(new CaughtThrowableObjectEvent($e));
+
+                throw $e;
             }
         }
 
